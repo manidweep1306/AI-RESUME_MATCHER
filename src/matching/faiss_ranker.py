@@ -3,33 +3,38 @@ import numpy as np
 
 
 class FaissRanker:
-    def __init__(self, dim: int = 384):
-        self.dim = dim
-        self.index = faiss.IndexFlatIP(dim)  # cosine similarity (inner product)
+    def __init__(self, dim: int):
+        self.index = faiss.IndexFlatL2(dim)
         self.filenames = []
 
-    def add(self, embeddings: np.ndarray, filenames: list[str]):
-        embeddings = embeddings.astype("float32")
-        faiss.normalize_L2(embeddings)
-
+    def add(self, embeddings: np.ndarray, filenames: list):
         self.index.add(embeddings)
         self.filenames.extend(filenames)
 
     def rank(self, query_embedding: np.ndarray, top_k: int = 5):
-        query = np.array([query_embedding]).astype("float32")
-        faiss.normalize_L2(query)
-
-        scores, indices = self.index.search(query, top_k)
+        D, I = self.index.search(np.array([query_embedding]), top_k)
 
         results = []
-        for i, idx in enumerate(indices[0]):
-            if idx == -1:
-                continue
-
-            results.append({
-                "rank": i + 1,
-                "filename": self.filenames[idx],
-                "score": round(float(scores[0][i]), 3)
-            })
-
+        for rank, idx in enumerate(I[0]):
+            if idx < len(self.filenames):
+                results.append({
+                    "rank": rank + 1,
+                    "filename": self.filenames[idx],
+                    "score": float(D[0][rank])
+                })
         return results
+
+    def remove(self, filename: str):
+        if filename not in self.filenames:
+            return
+
+        idx = self.filenames.index(filename)
+        self.filenames.pop(idx)
+
+        # rebuild index
+        vectors = self.index.reconstruct_n(0, self.index.ntotal)
+        vectors = np.delete(vectors, idx, axis=0)
+
+        self.index.reset()
+        if len(vectors) > 0:
+            self.index.add(vectors)

@@ -1,6 +1,14 @@
+# database & vector index
+resumes.db
+faiss.index
+faiss_meta.pkl
+
+# uploads
+data/uploads/
+
+# cache
 __pycache__/
 *.pyc
+
+# env
 .env
-data/uploads/
-resumes.db
-*.faiss

@@ -1,47 +1,58 @@
 import sqlite3
-import numpy as np
 
 DB_PATH = "resumes.db"
 
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
+def get_connection():
+    return sqlite3.connect(DB_PATH)
+
+
+def create_table():
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS resumes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            text TEXT,
-            embedding BLOB
+            filename TEXT UNIQUE,
+            text TEXT
         )
     """)
     conn.commit()
     conn.close()
 
 
-def save_resume(text: str, embedding: np.ndarray):
-    conn = sqlite3.connect(DB_PATH)
+def insert_resume(filename: str, text: str):
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO resumes (text, embedding) VALUES (?, ?)",
-        (text, embedding.tobytes())
+        "INSERT OR REPLACE INTO resumes (filename, text) VALUES (?, ?)",
+        (filename, text)
     )
     conn.commit()
     conn.close()
 
 
-def load_resumes():
-    conn = sqlite3.connect(DB_PATH)
+def get_all_resumes():
+    conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT text, embedding FROM resumes")
+    cursor.execute("SELECT filename, text FROM resumes")
     rows = cursor.fetchall()
     conn.close()
+    return rows
 
-    texts = []
-    embeddings = []
 
-    for text, blob in rows:
-        emb = np.frombuffer(blob, dtype=np.float32)
-        texts.append(text)
-        embeddings.append(emb)
+def resume_exists(filename: str) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM resumes WHERE filename = ?", (filename,))
+    exists = cursor.fetchone() is not None
+    conn.close()
+    return exists
 
-    return texts, embeddings
+
+def delete_resume_db(filename: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM resumes WHERE filename = ?", (filename,))
+    conn.commit()
+    conn.close()
