@@ -1,0 +1,5 @@
+Job Title: Software Engineer
+
+We are looking for a Software Engineer with strong Python skills.
+Required skills include Python, SQL, REST APIs, and basic NLP concepts.
+Experience with machine learning or resume parsing systems is a plus.
